@@ -3,6 +3,9 @@ import os
 import sys
 import re
 from openpyxl.styles import PatternFill
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
 
 def load_location_data():
     """Load location data from lists.csv"""
@@ -233,7 +236,31 @@ def process_excel_file():
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
+@app.route('/')
+def home():
+    return "Flask app is running."
+
+@app.route('/process', methods=['POST'])
+def process():
+    try:
+        process_excel_file()
+        return jsonify({"status": "success", "message": "Processing completed. Output saved to output_file.xlsx"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/check_address', methods=['POST'])
+def check_address():
+    data = request.get_json()
+    address = data.get('address')
+    dst_fac_code = data.get('dst_fac_code')
+    location_data = load_location_data()
+    validity, matches = check_address_match(address, dst_fac_code, location_data)
+    return jsonify({
+        "validity": validity,
+        "matches": matches
+    })
+
 if __name__ == "__main__":
-    process_excel_file()
+    app.run(debug=True)
 
 
